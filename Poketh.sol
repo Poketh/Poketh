@@ -52,7 +52,6 @@ library SafeMath {
 
 contract ERC20Basic {
   function totalSupply() public view returns (uint256);
-  function balanceOf(address who) public view returns (uint256);
   function transfer(address to, uint256 value) public returns (bool);
   event Transfer(address indexed from, address indexed to, uint256 value);
 }
@@ -60,7 +59,7 @@ contract ERC20Basic {
 
 contract BasicToken is ERC20Basic {
   using SafeMath for uint256;
-  mapping(address => uint256) balances;
+  mapping(address => mapping (uint256 => bool)) balances;
   uint256 totalSupply_;
 
   function totalSupply() public view returns (uint256) {
@@ -69,84 +68,84 @@ contract BasicToken is ERC20Basic {
 
 }
 
-contract ERC20 is ERC20Basic {
-  event Approval(address indexed owner, address indexed spender, uint256 value);
-}
 
 
-
-contract ERC891 is Ownable, ERC20, BasicToken {
+contract ERC891 is Ownable, ERC20Basic, BasicToken {
   event Mine(address indexed to, uint256 amount);
   event MiningFinished();
 
   bool public miningFinished = false;
   mapping(address => bool) claimed;
-
+  mapping(uint64 => uint8) lookup;
+  mapping(uint64 => uint8) acc;
 
   modifier canMine {
     require(!miningFinished);
     _;
   }
 
+  function ERC891() public{
+      lookup[15] = 52;
+      lookup[13] = 14;
+      
+      acc[15] = 0;
+      acc[13] = 52;
+  }
   
   function claim() canMine public {
     require(!claimed[msg.sender]);
-    bytes20 reward = bytes20(msg.sender) & 255;
-    require(reward > 0);
-    uint256 rewardInt = uint256(reward);
+    uint256 reward = checkReward();
+    require(reward != 9000);
     
     claimed[msg.sender] = true;
-    totalSupply_ = totalSupply_.add(rewardInt);
-    balances[msg.sender] = balances[msg.sender].add(rewardInt);
-    emit Mine(msg.sender, rewardInt);
-  }
-  
-  function claimAndTransfer(address _owner) canMine public {
-    require(!claimed[msg.sender]);
-    bytes20 reward = bytes20(msg.sender) & 255;
-    require(reward > 0);
-    uint256 rewardInt = uint256(reward);
-    
-    claimed[msg.sender] = true;
-    totalSupply_ = totalSupply_.add(rewardInt);
-    balances[_owner] = balances[_owner].add(rewardInt);
-    emit Mine(msg.sender, rewardInt);
-    emit Transfer(address(0), _owner, rewardInt);
+    balances[msg.sender][reward] = true;
   }
   
   
-  function checkReward() view public returns(uint256){
-    uint8 bitCount = 0;
+  function checkReward() view public returns(uint64){
+    uint64 bitCount = 0;
     bytes8 dataS = bytes8(msg.sender);
     bytes8 data = bytes8(msg.sender) & ((1 << 52) - 1);
     
     while(data != 0){
-        bitCount = bitCount + uint8(data & 1);
+        bitCount = bitCount + uint64(data & 1);
         data = data >> 1;
     }
     
-    return bitCount == 15 ? uint64(dataS >> 58) % 52 : 9000;
+    uint64 code = uint64(dataS >> 58);
+    return bitCount < 16 ? code % lookup[bitCount] + acc[13] : 9000; 
+
+  }
+  
+  function checkRewardAny(address a) view public returns(uint64){
+    uint64 bitCount = 0;
+    bytes8 dataS = bytes8(a);
+    bytes8 data = bytes8(a) & ((1 << 52) - 1);
+    
+    while(data != 0){
+        bitCount = bitCount + uint64(data & 1);
+        data = data >> 1;
+    }
+    
+    uint64 code = uint64(dataS >> 58);
+    return bitCount < 16 ? code % lookup[bitCount] : 9000; 
 
   }
   
   
   function transfer(address _to, uint256 _value) public returns (bool) {
     require(_to != address(0));
-    require(_value <= balances[msg.sender] ||
-           (!claimed[msg.sender] && _value <= balances[msg.sender] + uint256(bytes20(msg.sender) & 255))
-           );
+    require((!claimed[msg.sender]));
 
     if(!claimed[msg.sender]) claim();
 
-    balances[msg.sender] = balances[msg.sender].sub(_value);
-    balances[_to] = balances[_to].add(_value);
+    balances[msg.sender][_value] = false;
+    balances[_to][_value] = true;
     emit Transfer(msg.sender, _to, _value);
     return true;
   }
   
-  function balanceOf(address _owner) public view returns (uint256 balance) {
-    return balances[_owner] + (claimed[_owner] ? 0 : uint256(bytes20(_owner) & 255));
-  }
+
 }
 
 contract Poketh is ERC891 {
