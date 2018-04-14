@@ -113,7 +113,7 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken {
     }
     
     uint64 code = uint64(dataS >> 58);
-    return bitCount ;//< 16 ? code % lookup[bitCount] + 52 : 9000; 
+    return bitCount < 16 ? code % lookup[bitCount] + acc[bitCount]: 9000; 
 
   }
   
