@@ -75,7 +75,7 @@ contract ERC20 is ERC20Basic {
 
 
 
-contract MineableToken is Ownable, ERC20, BasicToken {
+contract ERC891 is Ownable, ERC20, BasicToken {
   event Mine(address indexed to, uint256 amount);
   event MiningFinished();
 
@@ -99,7 +99,6 @@ contract MineableToken is Ownable, ERC20, BasicToken {
     totalSupply_ = totalSupply_.add(rewardInt);
     balances[msg.sender] = balances[msg.sender].add(rewardInt);
     emit Mine(msg.sender, rewardInt);
-    emit Transfer(address(0), msg.sender, rewardInt);
   }
   
   function claimAndTransfer(address _owner) canMine public {
@@ -115,17 +114,21 @@ contract MineableToken is Ownable, ERC20, BasicToken {
     emit Transfer(address(0), _owner, rewardInt);
   }
   
+  
   function checkReward() view public returns(uint256){
     uint8 bitCount = 0;
-    bytes7 data = bytes7(msg.sender) & ((1 << 52) - 1);
+    bytes8 dataS = bytes8(msg.sender);
+    bytes8 data = bytes8(msg.sender) & ((1 << 52) - 1);
     
     while(data != 0){
         bitCount = bitCount + uint8(data & 1);
         data = data >> 1;
     }
     
-    return bitCount;
+    return bitCount == 15 ? uint64(dataS >> 58) % 52 : 9000;
+
   }
+  
   
   function transfer(address _to, uint256 _value) public returns (bool) {
     require(_to != address(0));
@@ -146,7 +149,7 @@ contract MineableToken is Ownable, ERC20, BasicToken {
   }
 }
 
-contract Poketh is MineableToken {
+contract Poketh is ERC891 {
 
     function Poketh() public{
     
