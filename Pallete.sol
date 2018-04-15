@@ -18,12 +18,11 @@ contract Ownable {
     emit OwnershipTransferred(owner, newOwner);
     owner = newOwner;
   }
-
 }
 
 contract Pallete is Ownable {
-  mapping(uint256 => uint64) colors;
-  uint256 internal idx;
+  mapping(uint64 => uint64) colors;
+  uint64 internal idx;
 
   function Pallete() public {
     colors[1] = 0xEDE9E8;
@@ -77,7 +76,7 @@ contract Pallete is Ownable {
     colors[49] = 0x1A0118;
     colors[50] = 0x050505;
     
-    idx = 51;
+    idx = 50;
   }
   
   function addColor(uint64 _c) public onlyOwner {
