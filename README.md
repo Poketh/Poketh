@@ -1,2 +1,2 @@
 # Poketh
-Pokemon ETH Contracts
+PokETH Contracts, Info, and Utilities
