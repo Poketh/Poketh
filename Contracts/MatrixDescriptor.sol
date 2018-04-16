@@ -29,13 +29,22 @@ contract MatrixDescriptor is Ownable {
 
   function MatrixDescriptor(address _pallete) public {
     colors = Pallete(_pallete);
-    items[1] = [uint64(52), 51, 0, 51, 0,
-      53, 0, 55, 52, 0,
-      54, 53, 53, 55, 0,
-      54, 0, 54, 0, 0
-    ];
+    items[1] = [uint64(52), 51,  0, 51,  0,
+                        53,  0, 55, 52,  0,
+                        54, 53, 53, 55,  0,
+                        54,  0, 54,  0,  0];
+                        
+    items[2] = [uint64( 0), 53, 52,  0,  0,
+                        53, 52, 52, 57,  0,
+                         0, 54, 52, 58,  0,
+                         0, 56, 52, 52,  0];
 
-    idx = 1;
+    items[3] = [uint64(55), 55,  0,  0,  0,
+                        53, 59, 55, 55,  0,
+                        52, 56, 59,  0,  0,
+                         0, 54, 53,  0,  0];
+
+    idx = 3;
   }
 
   function addItem(uint64[matrixSize] _itm) public onlyOwner {
