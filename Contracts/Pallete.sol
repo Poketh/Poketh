@@ -25,6 +25,7 @@ contract Pallete is Ownable {
   uint64 internal idx;
 
   function Pallete() public {
+      /*
     colors[1] = 0xEDE9E8;
     colors[2] = 0xEDDFED;
     colors[3] = 0xEBEADD;
@@ -75,8 +76,14 @@ contract Pallete is Ownable {
     colors[48] = 0x01061A;
     colors[49] = 0x1A0118;
     colors[50] = 0x050505;
+      */
+    colors[51] = 0xDE161D;
+    colors[52] = 0xF79C2E;
+    colors[53] = 0xFEEDCE;
+    colors[54] = 0xEDC58D;
+    colors[55] = 0xE55F32;
     
-    idx = 50;
+    idx = 55;
   }
   
   function addColor(uint64 _c) public onlyOwner {
