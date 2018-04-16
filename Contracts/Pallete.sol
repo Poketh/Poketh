@@ -82,8 +82,12 @@ contract Pallete is Ownable {
     colors[53] = 0xFEEDCE;
     colors[54] = 0xEDC58D;
     colors[55] = 0xE55F32;
+    colors[56] = 0xB08A4A;
+    colors[57] = 0x216B65;
+    colors[58] = 0x2DA37E;
+    colors[59] = 0x805B4A;
     
-    idx = 55;
+    idx = 59;
   }
   
   function addColor(uint64 _c) public onlyOwner {
