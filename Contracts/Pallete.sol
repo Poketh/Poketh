@@ -35,7 +35,7 @@ contract Pallete is Ownable {
     colors[57] = 0x216B65;
     colors[58] = 0x2DA37E;
     colors[59] = 0x805B4A;
-    
+    idx = 59;
     
 /* ----------------
     Pallete HEX
@@ -45,15 +45,25 @@ contract Pallete is Ownable {
     FEEDCE 53 
     EDC58D 54
     E55F32 55
-
     B08A4A 56 
     216B65 57
     2DA37E 58 
-
     805B4A 59
+    E5BC2A 60
+    E4BB3C 61
+    FFFEB9 62
+    DEA253 63
+    CBD1E0 64
+    00000F 65
+    E6E6DA 66
+    FCFCFA 67
+    FEE141 68
+    CBBB29 69
+    D3B350 70
+    82929E 71
+    FCD455 72
 ---------------- */
     
-    idx = 59;
   }
   
   function addColor(uint64 _c) public onlyOwner {
