@@ -164,7 +164,6 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken {
 
   function transfer(address _to, uint256 _value) public returns(bool) {
     require(_to != address(0));
-    require((!claimed[msg.sender]));
 
     if (!claimed[msg.sender]) claim();
     require(balances[msg.sender][_value] > 0 && balances[_to][_value] < 1000);
