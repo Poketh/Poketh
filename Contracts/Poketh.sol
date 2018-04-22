@@ -1,4 +1,4 @@
-pragma solidity ^ 0.4 .20;
+pragma solidity ^ 0.4.20;
 
 contract Ownable {
   address public owner;
@@ -20,7 +20,6 @@ contract Ownable {
   }
 
 }
-
 
 library SafeMath {
   function mul(uint256 a, uint256 b) internal pure returns(uint256) {
@@ -89,9 +88,25 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken {
   function ERC891() public {
     lookup[15] = 52;
     lookup[13] = 14;
+    lookup[12] = 8;
+    lookup[11] = 12;
+    lookup[10] = 10;
+    lookup[9]  = 3;
+    lookup[8]  = 4;
+    lookup[8]  = 10;
+    lookup[7]  = 7;
+    lookup[6]  = 31;
 
     acc[15] = 0;
-    acc[13] = 52;
+    acc[13] = acc[15] + lookup[15];
+    acc[12] = acc[13] + lookup[13];
+    acc[11] = acc[12] + lookup[12];
+    acc[10] = acc[11] + lookup[11];
+    acc[9]  = acc[10] + lookup[10];
+    acc[8]  = acc[9]  + lookup[9];
+    acc[8]  = acc[8]  + lookup[8];
+    acc[7]  = acc[8]  + lookup[8];
+    acc[6]  = acc[7]  + lookup[7];
   }
 
   function claim() canMine public {
