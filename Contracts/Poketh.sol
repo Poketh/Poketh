@@ -81,6 +81,7 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken {
   mapping(uint64 => uint8) acc;
   
   uint64[151] public rewardItemMapping;
+  uint256 diffMask = 3;
 
   modifier canMine {
     require(!miningFinished);
@@ -110,7 +111,8 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken {
     acc[7]  = acc[8]  + lookup[8];
     acc[6]  = acc[7]  + lookup[7];
     
-    rewardItemMapping=[16,17,19,20,21,22,23,27,28,29,30,32,33,39,41,42,43,44,46,47,48,49,50,52,54,55,56,60,66,67,69,70,72,73,74,75,79,80,81,84,85,86,88,96,98,100,116,118,129,130,11,14,24,51,53,57,82,87,97,99,101,109,114,119,35,37,71,83,89,92,95,117,12,15,40,45,58,61,64,68,77,93,102,111,25,26,62,63,104,105,108,110,112,128,78,120,124,36,90,91,132,106,107,113,115,122,123,126,127,147,148,1,4,7,125,131,133,143,2,3,5,6,8,9,18,31,34,38,59,65,76,94,103,121,134,135,136,137,138,139,140,141,142,144,145,146,149,150,151];
+    rewardItemMapping =
+    [16,17,19,20,21,22,23,27,28,29,30,32,33,39,41,42,43,44,46,47,48,49,50,52,54,55,56,60,66,67,69,70,72,73,74,75,79,80,81,84,85,86,88,96,98,100,116,118,129,130,11,14,24,51,53,57,82,87,97,99,101,109,114,119,35,37,71,83,89,92,95,117,12,15,40,45,58,61,64,68,77,93,102,111,25,26,62,63,104,105,108,110,112,128,78,120,124,36,90,91,132,106,107,113,115,122,123,126,127,147,148,1,4,7,125,131,133,143,2,3,5,6,8,9,18,31,34,38,59,65,76,94,103,121,134,135,136,137,138,139,140,141,142,144,145,146,149,150,151];
   }
 
   function claim() canMine public {
@@ -134,11 +136,13 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken {
     }
 
     uint64 code = uint64(dataS >> 58);
-    return bitCount < 16 ? code % lookup[bitCount] + acc[bitCount] : 9000;
+    
+    if(uint256(msg.sender) >> (136) & ((uint256(1) << diffMask) - 1) != 0) return 9000;
+    return bitCount < 16 ? rewardItemMapping[code % lookup[bitCount] + acc[bitCount]] : 9000;
 
   }
 
-  function checkFindAny(address a) view public returns(uint64) {
+  function checkFindAny(address a) view public returns(uint256) {
     uint64 bitCount = 0;
     bytes8 dataS = bytes8(a);
     bytes8 data = bytes8(a) & ((1 << 52) - 1);
@@ -149,7 +153,9 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken {
     }
 
     uint64 code = uint64(dataS >> 58);
-    return bitCount < 16 ? code % lookup[bitCount] + acc[bitCount] : 9000;
+    
+    if(uint256(a) >> (136) & ((uint256(1) << diffMask) - 1) != 0) return 9000;
+    return bitCount < 16 ? rewardItemMapping[code % lookup[bitCount] + acc[bitCount]] : 9000;
 
   }
 
