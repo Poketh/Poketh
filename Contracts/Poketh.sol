@@ -59,7 +59,7 @@ contract ERC20Basic {
 
 contract BasicToken is ERC20Basic {
   using SafeMath for uint256;
-  mapping(address => mapping(uint256 => bool)) balances;
+  mapping(address => mapping(uint256 => uint256)) balances;
   uint256 totalSupply_;
 
   function totalSupply() public view returns(uint256) {
@@ -119,9 +119,11 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken {
     require(!claimed[msg.sender]);
     uint256 reward = checkFind();
     require(reward != 9000);
+    require(balances[msg.sender][reward] < 1000);
+
     
     claimed[msg.sender] = true;
-    balances[msg.sender][reward] = true;
+    balances[msg.sender][reward] = balances[msg.sender][reward] + 1;
   }
 
 
@@ -165,11 +167,22 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken {
     require((!claimed[msg.sender]));
 
     if (!claimed[msg.sender]) claim();
+    require(balances[msg.sender][_value] > 0 && balances[_to][_value] < 1000);
 
-    balances[msg.sender][_value] = false;
-    balances[_to][_value] = true;
+    balances[msg.sender][_value]--;
+    balances[_to][_value]++;
     emit Transfer(msg.sender, _to, _value);
     return true;
+  }
+  
+  function balanceOf(address _add) view public returns(uint256[151]){
+      uint256[151] memory collection;
+      
+      for(uint256 i = 0; i < 151; i++){
+        collection[i] = balances[_add][i];
+      }
+      
+      return collection;
   }
 
 
