@@ -141,11 +141,11 @@
 141	10	Kabutops
 142	10	Aerodactyl
 143	9	Snorlax
-144	10	Articuno
-145	10	Zapdos
-146	10	Moltres
+144	11	Articuno
+145	11	Zapdos
+146	11	Moltres
 147	8	Dratini
 148	8	Dragonair
 149	10	Dragonite
-150	10	Mewtwo
-151	10	Mew
+150	11	Mewtwo
+151	11	Mew
