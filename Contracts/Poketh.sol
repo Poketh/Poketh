@@ -174,7 +174,7 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken {
   function balanceOf(address _add) view public returns(uint256[151]) {
     uint256[151] memory collection;
 
-    for (uint256 i = 0; i < 151; i++) {
+    for (uint256 i = 1; i <= 151; i++) {
       collection[i] = balances[_add][i];
     }
 
