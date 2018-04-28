@@ -1,5 +1,5 @@
 # Poketh
-PokETH Contracts, Info, and Utilities
+Poketh Contracts, Info, and Utilities
 
 ## What is it?
 
