@@ -81,7 +81,7 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken {
   mapping(uint64 => uint8) lookup;
   mapping(uint64 => uint8) acc;
 
-  uint64[151] public rewardItemMapping;
+  uint64[151] private rewardItemMapping;
   uint256 diffMask = 3;
 
   modifier canMine {
@@ -176,6 +176,16 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken {
 
     for (uint256 i = 1; i <= 151; i++) {
       collection[i] = balances[_add][i];
+    }
+
+    return collection;
+  }
+  
+  function itemMapping() view public returns(uint256[151]){
+    uint256[151] memory collection;
+
+    for (uint256 i = 0; i < 150; i++) {
+      collection[i] = rewardItemMapping[i];
     }
 
     return collection;
