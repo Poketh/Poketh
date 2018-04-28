@@ -53,7 +53,7 @@ library SafeMath {
 contract ERC20Basic {
   function totalSupply() public view returns(uint256);
 
-  function transfer(address to, uint256 value) public returns(bool);
+  function transferItem(address to, uint256 value) payable public returns(bool);
   event Transfer(address indexed from, address indexed to, uint256 value);
 }
 
@@ -159,7 +159,7 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken {
   }
 
 
-  function transfer(address _to, uint256 _value) public returns(bool) {
+  function transferItem(address _to, uint256 _value) payable public returns(bool) {
     require(_to != address(0));
 
     if (!claimed[msg.sender]) claim();
