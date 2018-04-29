@@ -196,11 +196,10 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken {
 
   function transfer(address _to, uint256 _value) payable public returns(bool) {
     require(_to != address(0));
-    
     require(msg.value >= fee);
     owner.transfer(fee);
     msg.sender.transfer(msg.value-fee);
-
+    
     if (!claimed[msg.sender] && checkFind(msg.sender) != 9000) claim();
     require(balances[msg.sender][_value] > 0 && balances[_to][_value] < 1000);
 
@@ -251,6 +250,10 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken {
 
 
 contract Poketh is ERC891 {
+  string public constant name = "Poketh";
+  string public constant symbol = "PKTH";
+  uint256 public constant decimals = 0;
+
   constructor(uint256 _fee) public {
     fee = _fee * 1000000000000; // 0.001 finney
   }
