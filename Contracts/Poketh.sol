@@ -210,7 +210,7 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken {
     return true;
   }
   
-   /* -----------------------------------------------------
+    /* -----------------------------------------------------
         balanceOf(address) returns (uint256[151])
         
         - Take the balance of the address, store into a 
@@ -229,7 +229,7 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken {
     return collection;
   }
   
-  /* -----------------------------------------------------
+    /* -----------------------------------------------------
         itemMapping(address) returns (uint256[151])
         
         - Get the mapping for the rarity tiers.
