@@ -51,7 +51,7 @@ library SafeMath {
 
 
 contract ERC20Basic {
-  function transfer(address to, uint256 value) payable public returns(bool);
+  function transfer(address to, uint256 value) public returns(bool);
   event Transfer(address indexed from, address indexed to, uint256 value);
 }
 
@@ -59,6 +59,11 @@ contract ERC20Basic {
 contract BasicToken is ERC20Basic {
   using SafeMath for uint256;
   mapping(address => mapping(uint256 => uint256)) balances;
+  
+  uint256 totalSupply_;
+  function totalSupply() public view returns(uint256) {
+    return totalSupply_;
+  }
 }
 
 
@@ -77,6 +82,7 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken {
 
     // Collection Database
   mapping(address => bool) claimed;
+  mapping(address => bool) feepaid;
   mapping(uint8 => uint8) lookup;
   mapping(uint8 => uint8) acc;
 
@@ -184,21 +190,20 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken {
 
     /* -----------------------------------------------------
         transfer(address,uint256) returns (bool)
+            (API friendly)
         
         - Sends the item with ID from value.
         - Doesn't allow sending to 0x0.
-        - Requires a fee on payable sent to owner.
+        - Requires a registration fee sent to owner.
         - Returns leftover eth to the sender.
         - If the address has an item, it is claimed.
         - Max balance for each item is 1000.
         
     ----------------------------------------------------- */
 
-  function transfer(address _to, uint256 _value) payable public returns(bool) {
+  function transfer(address _to, uint256 _value) public returns(bool) {
     require(_to != address(0));
-    require(msg.value >= fee);
-    owner.transfer(fee);
-    msg.sender.transfer(msg.value-fee);
+    require(feepaid[msg.sender]);
     
     if (!claimed[msg.sender] && checkFind(msg.sender) != 9000) claim();
     require(balances[msg.sender][_value] > 0 && balances[_to][_value] < 1000);
@@ -207,6 +212,41 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken {
     balances[_to][_value]++;
     emit Transfer(msg.sender, _to, _value);
     return true;
+  }
+  
+    /* -----------------------------------------------------
+        fallback
+            (API friendly)
+        
+        - Pays the fee to the owner and returns the
+        excess to the sender.
+        
+    ----------------------------------------------------- */
+  
+  function() payable public {
+    require(msg.value >= fee);
+    owner.transfer(fee);
+    msg.sender.transfer(msg.value-fee);
+    
+    feepaid[msg.sender] = true;
+  }
+  
+    /* -----------------------------------------------------
+        transfer(address,uint256) returns (bool)
+            (web3 friendly)
+        
+        - Combines the payable fallback and the API 
+        friendly transfer() in a single call.
+        
+    ----------------------------------------------------- */
+  function payFeeAndTransfer(address _to, uint256 _value) payable public returns(bool){
+    require(msg.value >= fee);
+    owner.transfer(fee);
+    msg.sender.transfer(msg.value-fee);
+    
+    feepaid[msg.sender] = true;
+    
+    return transfer(_to, _value);
   }
   
     /* -----------------------------------------------------
@@ -221,8 +261,8 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken {
   function balanceOf(address _add) view public returns(uint256[151]) {
     uint256[151] memory collection;
 
-    for (uint256 i = 1; i <= 151; i++) {
-      collection[i] = balances[_add][i];
+    for (uint256 i = 0; i <= 150; i++) {
+      collection[i] = balances[_add][i+1];
     }
 
     return collection;
