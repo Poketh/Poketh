@@ -49,25 +49,98 @@ library SafeMath {
   }
 }
 
+contract EIP20Interface {
+    uint256 public totalSupply;
 
-contract ERC20Basic {
-  function transfer(address to, uint256 value) public returns(bool);
-  event Transfer(address indexed from, address indexed to, uint256 value);
+    function balanceOf(address _add) public view returns(uint256[152]);
+
+    function transfer(address _to, uint256 _value) public returns (bool success);
+
+    function transferFrom(address _from, address _to, uint256 _value) public returns (bool success);
+
+    function approve(address _spender, uint256 _value) public returns (bool success);
+
+    function allowance(address _owner, address _spender) public view returns(uint256[152]);
+
+    event Transfer(address indexed _from, address indexed _to, uint256 _value);
+    event Approval(address indexed _owner, address indexed _spender, uint256 _value);
 }
 
 
-contract BasicToken is ERC20Basic {
-  using SafeMath for uint256;
-  mapping(address => mapping(uint256 => uint256)) balances;
-  
-  uint256 totalSupply_;
-  function totalSupply() public view returns(uint256) {
-    return totalSupply_;
-  }
+contract EIP20 is EIP20Interface {
+
+    uint256 constant private MAX_UINT256 = 2**256 - 1;
+    mapping(address => mapping(uint256 => uint256)) balances;
+    mapping (address => mapping (address => mapping(uint256 => uint256))) public allowed;
+
+    string public name;                   
+    uint8 public decimals;                
+    string public symbol;                 
+
+    constructor(
+        uint256 _initialAmount,
+        string _tokenName,
+        uint8 _decimalUnits,
+        string _tokenSymbol
+    ) public {
+        totalSupply = _initialAmount;                        
+        name = _tokenName;                                   
+        decimals = _decimalUnits;                            
+        symbol = _tokenSymbol;                               
+    }
+     
+    function transfer(address _to, uint256 _value) public returns (bool success) {
+        require(balances[msg.sender][_value] >= 1);
+        balances[msg.sender][_value] -= 1;
+        balances[_to][_value] += 1;
+        emit Transfer(msg.sender, _to, _value); //solhint-disable-line indent, no-unused-vars
+        return true;
+    }
+
+    function transferFrom(address _from, address _to, uint256 _value) public returns (bool success) {
+        uint256 allowance = allowed[_from][msg.sender][_value];
+        require(balances[_from][_value] >= 1 && allowance >= 1);
+        balances[_to][_value] += 1;
+        balances[_from][_value] -= 1;
+        if (allowance < MAX_UINT256) {
+            allowed[_from][msg.sender][_value] -= 1;
+        }
+        emit Transfer(_from, _to, _value); //solhint-disable-line indent, no-unused-vars
+        return true;
+    }
+
+    function balanceOf(address _add) public view returns(uint256[152]) {
+        uint256[152] memory collection;
+        collection[0] = uint256(-1);
+
+        for (uint256 i = 1; i <= 151; i++) {
+            collection[i] = balances[_add][i];
+        }
+
+        return collection;
+    }
+
+    function approve(address _spender, uint256 _value) public returns (bool success) {
+        allowed[msg.sender][_spender][_value] = 1;
+        emit Approval(msg.sender, _spender, _value); //solhint-disable-line indent, no-unused-vars
+        return true;
+    }
+
+    function allowance(address _owner, address _spender) public view returns(uint256[152]) {
+        uint256[152] memory collection;
+        collection[0] = uint256(-1);
+
+        for (uint256 i = 1; i <= 151; i++) {
+            collection[i] = allowed[_owner][_spender][i];
+        }
+
+        return collection;
+    }
 }
 
 
-contract ERC891 is Ownable, ERC20Basic, BasicToken {
+
+contract ERC891 is Ownable, EIP20 {
     
     // Events 
   event Mine(address indexed to, uint256 amount);
@@ -88,40 +161,14 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken {
 
 
     // Item mapping from codes to IDs
-  uint8[151] private rewardItemMapping;
+  uint8[151] rewardItemMapping;
+
 
   modifier canMine {
     require(!miningFinished);
     _;
   }
 
-  constructor() public {
-    lookup[15] = 52;
-    lookup[13] = 14;
-    lookup[12] = 8;
-    lookup[11] = 12;
-    lookup[10] = 10;
-    lookup[9]  = 3;
-    lookup[8]  = 4;
-    lookup[8]  = 10;
-    lookup[7]  = 7;
-    lookup[6]  = 26;
-    lookup[3]  = 5;
-
-    acc[15] = 0;
-    acc[13] = acc[15] + lookup[15];
-    acc[12] = acc[13] + lookup[13];
-    acc[11] = acc[12] + lookup[12];
-    acc[10] = acc[11] + lookup[11];
-    acc[9]  = acc[10] + lookup[10];
-    acc[8]  = acc[9]  + lookup[9];
-    acc[8]  = acc[8]  + lookup[8];
-    acc[7]  = acc[8]  + lookup[8];
-    acc[6]  = acc[7]  + lookup[7];
-    acc[3]  = acc[6]  + lookup[6];
-
-    rewardItemMapping = [16, 17, 19, 20, 21, 22, 23, 27, 28, 29, 30, 32, 33, 39, 41, 42, 43, 44, 46, 47, 48, 49, 50, 52, 54, 55, 56, 60, 66, 67, 69, 70, 72, 73, 74, 75, 79, 80, 81, 84, 85, 86, 88, 96, 98, 100, 116, 118, 129, 130, 11, 14, 24, 51, 53, 57, 82, 87, 97, 99, 101, 109, 114, 119, 35, 37, 71, 83, 89, 92, 95, 117, 12, 15, 40, 45, 58, 61, 64, 68, 77, 93, 102, 111, 25, 26, 62, 63, 104, 105, 108, 110, 112, 128, 78, 120, 124, 36, 90, 91, 132, 106, 107, 113, 115, 122, 123, 126, 127, 147, 148, 1, 4, 7, 125, 131, 133, 143, 2, 3, 5, 6, 8, 9, 18, 31, 34, 38, 59, 65, 76, 94, 103, 121, 134, 135, 136, 137, 138, 139, 140, 141, 142, 144, 145, 146, 149, 150, 151];
-  }
 
     /* -----------------------------------------------------
         claim() 
@@ -159,19 +206,18 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken {
         - Returning 9000 signals an invalid address for
         the current difficulty mask.
         
-        dataSelector    <- address trimmed to 64 bits
-        data            <- address masked to 52 bits
+        dataSelector    <- address 160 bits
+        data            <- address masked to bitpool bits
         bitCount        <- store the 1 bit count in data
-        code            <- discriminator for same-tier
-                            items
+
         
         Apply the diff mask by cheking the single case 
-        2^(diffMask)-1 AND the first 16 bits of the address
+        2^(diffMask)-1 AND the first bits of the address
         which needs to be 0.
         
     ----------------------------------------------------- */
 
-  function checkFind(address _add) view public returns(uint16) {
+ function checkFind(address _add) view public returns(uint16) {
     uint8  bitCount = 0;
     
     bytes8 dataSelector = bytes8(_add);
@@ -188,115 +234,38 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken {
     return lookup[bitCount] > 0 ? rewardItemMapping[code % lookup[bitCount] + acc[bitCount]] : 9000;
   }
 
-    /* -----------------------------------------------------
-        transfer(address,uint256) returns (bool)
-            (API friendly)
-        
-        - Sends the item with ID from value.
-        - Doesn't allow sending to 0x0.
-        - Requires a registration fee sent to owner.
-        - Returns leftover eth to the sender.
-        - If the address has an item, it is claimed.
-        - Max balance for each item is 1000.
-        
-    ----------------------------------------------------- */
-
-  function transfer(address _to, uint256 _value) public returns(bool) {
-    require(_to != address(0));
-    require(feepaid[msg.sender]);
-    
-    if (!claimed[msg.sender] && checkFind(msg.sender) != 9000) claim();
-    require(balances[msg.sender][_value] > 0 && balances[_to][_value] < 1000);
-
-    balances[msg.sender][_value]--;
-    balances[_to][_value]++;
-    emit Transfer(msg.sender, _to, _value);
-    return true;
-  }
-  
-    /* -----------------------------------------------------
-        fallback
-            (API friendly)
-        
-        - Pays the fee to the owner and returns the
-        excess to the sender.
-        
-    ----------------------------------------------------- */
-  
-  function() payable public {
-    require(msg.value >= fee);
-    owner.transfer(fee);
-    msg.sender.transfer(msg.value-fee);
-    
-    feepaid[msg.sender] = true;
-  }
-  
-    /* -----------------------------------------------------
-        transfer(address,uint256) returns (bool)
-            (web3 friendly)
-        
-        - Combines the payable fallback and the API 
-        friendly transfer() in a single call.
-        
-    ----------------------------------------------------- */
-  function payFeeAndTransfer(address _to, uint256 _value) payable public returns(bool){
-    require(msg.value >= fee);
-    owner.transfer(fee);
-    msg.sender.transfer(msg.value-fee);
-    
-    feepaid[msg.sender] = true;
-    
-    return transfer(_to, _value);
-  }
-  
-    /* -----------------------------------------------------
-        balanceOf(address) returns (uint256[151])
-        
-        - Take the balance of the address, store into a 
-        memory type and return the collection.
-        - The collection runs from ID 1 to 151.
-        
-    ----------------------------------------------------- */
-
-  function balanceOf(address _add) view public returns(uint256[152]) {
-    uint256[152] memory collection;
-    collection[0] = uint256(-1);
-
-    for (uint256 i = 1; i <= 151; i++) {
-      collection[i] = balances[_add][i];
-    }
-
-    return collection;
-  }
-  
-    /* -----------------------------------------------------
-        itemMapping(address) returns (uint256[151])
-        
-        - Get the mapping for the rarity tiers.
-        - The mapping runs from 0 to 150.
-        
-    ----------------------------------------------------- */
-  
-  function itemMapping() view public returns(uint256[151]){
-    uint256[151] memory collection;
-
-    for (uint256 i = 0; i < 151; i++) {
-      collection[i] = rewardItemMapping[i];
-    }
-
-    return collection;
-  }
 }
 
 
 
 contract Poketh is ERC891 {
-  string public constant name = "Poketh";
-  string public constant symbol = "PKTH";
-  uint256 public constant decimals = 0;
 
-  constructor(uint256 _fee) public {
-    fee = _fee * 1000000000000; // 0.001 finney
+  constructor() public {
+    lookup[15] = 52;
+    lookup[13] = 14;
+    lookup[12] = 8;
+    lookup[11] = 12;
+    lookup[10] = 10;
+    lookup[9]  = 3;
+    lookup[8]  = 4;
+    lookup[8]  = 10;
+    lookup[7]  = 7;
+    lookup[6]  = 26;
+    lookup[3]  = 5;
+
+    acc[15] = 0;
+    acc[13] = acc[15] + lookup[15];
+    acc[12] = acc[13] + lookup[13];
+    acc[11] = acc[12] + lookup[12];
+    acc[10] = acc[11] + lookup[11];
+    acc[9]  = acc[10] + lookup[10];
+    acc[8]  = acc[9]  + lookup[9];
+    acc[8]  = acc[8]  + lookup[8];
+    acc[7]  = acc[8]  + lookup[8];
+    acc[6]  = acc[7]  + lookup[7];
+    acc[3]  = acc[6]  + lookup[6];
+
+    rewardItemMapping = [16, 17, 19, 20, 21, 22, 23, 27, 28, 29, 30, 32, 33, 39, 41, 42, 43, 44, 46, 47, 48, 49, 50, 52, 54, 55, 56, 60, 66, 67, 69, 70, 72, 73, 74, 75, 79, 80, 81, 84, 85, 86, 88, 96, 98, 100, 116, 118, 129, 130, 11, 14, 24, 51, 53, 57, 82, 87, 97, 99, 101, 109, 114, 119, 35, 37, 71, 83, 89, 92, 95, 117, 12, 15, 40, 45, 58, 61, 64, 68, 77, 93, 102, 111, 25, 26, 62, 63, 104, 105, 108, 110, 112, 128, 78, 120, 124, 36, 90, 91, 132, 106, 107, 113, 115, 122, 123, 126, 127, 147, 148, 1, 4, 7, 125, 131, 133, 143, 2, 3, 5, 6, 8, 9, 18, 31, 34, 38, 59, 65, 76, 94, 103, 121, 134, 135, 136, 137, 138, 139, 140, 141, 142, 144, 145, 146, 149, 150, 151];
   }
 
   function setFee(uint256 _fee) onlyOwner public {
