@@ -242,7 +242,7 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken {
         uint8 bitCount = 0;
 
         bytes8 dataSelector = bytes8(_add);
-        bytes8 data = bytes8(_add) & ((1 << 52) - 1);
+        bytes8 data         = bytes8(_add) & ((1 << 52) - 1);
 
         while (data != 0) {
             bitCount = bitCount + uint8(data & 1);
