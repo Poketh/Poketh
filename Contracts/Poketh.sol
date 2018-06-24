@@ -1,5 +1,7 @@
 pragma solidity ^ 0.4.23;
 
+import "./ECRecovery.sol";
+
 contract Ownable {
   address public owner;
   event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
@@ -107,8 +109,11 @@ contract BasicToken is ERC20Basic {
 
 contract ERC891 is Ownable, ERC20Basic, BasicToken {
     
+  using ECRecovery for bytes32;
+    
     // Events 
   event Mine(address indexed to, uint256 amount);
+  event Check(address a);
   event MiningFinished();
 
 
@@ -179,13 +184,31 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken {
     require(!claimed[msg.sender]);
    
     require(reward != 9000);
-    require(balances[msg.sender][reward] < 1000);
-
 
     claimed[msg.sender] = true;
     balances[msg.sender][reward] = balances[msg.sender][reward] + 1;
     
     emit Mine(msg.sender, reward);
+  }
+  
+  /* -----------------------------------------------------
+        claimFor(address) 
+        
+        - Delegated version of claim()
+
+
+    ----------------------------------------------------- */
+  
+  function claimFor(address _address) canMine public {
+    uint256 reward = checkFind(_address);
+    require(!claimed[_address]);
+   
+    require(reward != 9000);
+
+    claimed[_address] = true;
+    balances[_address][reward] = balances[_address][reward] + 1;
+    
+    emit Mine(_address, reward);
   }
 
     /* -----------------------------------------------------
@@ -241,10 +264,9 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken {
 
   function transfer(address _to, uint256 _value) public returns(bool) {
     require(_to != address(0));
-    require(feepaid[msg.sender]);
-    
+
     if (!claimed[msg.sender] && checkFind(msg.sender) != 9000) claim();
-    require(balances[msg.sender][_value] > 0 && balances[_to][_value] < 1000);
+    require(balances[msg.sender][_value] > 0);
 
     balances[msg.sender][_value]--;
     balances[_to][_value]++;
@@ -267,25 +289,21 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken {
     msg.sender.transfer(msg.value-fee);
     
     feepaid[msg.sender] = true;
+    
+    
+    bytes32 hash = bytes32(keccak256(abi.encodePacked(
+                                                    "\x19Ethereum Signed Message:\n32",
+                                                    keccak256(abi.encodePacked(msg.sender))
+                                                    )));
+    address sender = hash.recover(msg.data);
+    uint256 reward = checkFind(sender);
+
+    claimFor(sender);
+    
+    allowed[sender][msg.sender][reward] = 1;
+    transferFrom(sender, msg.sender, reward);
   }
   
-    /* -----------------------------------------------------
-        transfer(address,uint256) returns (bool)
-            (web3 friendly)
-        
-        - Combines the payable fallback and the API 
-        friendly transfer() in a single call.
-        
-    ----------------------------------------------------- */
-  function payFeeAndTransfer(address _to, uint256 _value) payable public returns(bool){
-    require(msg.value >= fee);
-    owner.transfer(fee);
-    msg.sender.transfer(msg.value-fee);
-    
-    feepaid[msg.sender] = true;
-    
-    return transfer(_to, _value);
-  }
   
     /* -----------------------------------------------------
         balanceOf(address) returns (uint256[151])
