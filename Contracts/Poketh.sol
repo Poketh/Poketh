@@ -1,28 +1,9 @@
 pragma solidity ^ 0.4.23;
 
 import "./ECRecovery.sol";
-
-contract Ownable {
-    address public owner;
-    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-
-    constructor() public {
-        owner = msg.sender;
-    }
-
-    modifier onlyOwner() {
-        require(msg.sender == owner);
-        _;
-    }
-
-    function transferOwnership(address newOwner) public onlyOwner {
-        require(newOwner != address(0));
-        emit OwnershipTransferred(owner, newOwner);
-        owner = newOwner;
-    }
-
-}
-
+import "./Balances.sol";
+import "./Ownable.sol";
+import "./Pausable.sol";
 
 library SafeMath {
     function mul(uint256 a, uint256 b) internal pure returns(uint256) {
@@ -70,8 +51,10 @@ contract ERC20Basic {
 contract BasicToken is ERC20Basic {
     using SafeMath
     for uint256;
+    
     uint256 constant private MAX_UINT256 = 2 ** 256 - 1;
-    mapping(address => mapping(uint256 => uint256)) balances;
+    
+    Balances balances;
     mapping(address => mapping(address => mapping(uint256 => uint256))) public allowed;
 
 
@@ -79,18 +62,6 @@ contract BasicToken is ERC20Basic {
 
     function totalSupply() public view returns(uint256) {
         return totalSupply_;
-    }
-
-    function transferFrom(address _from, address _to, uint256 _value) public returns(bool success) {
-        uint256 allowance = allowed[_from][msg.sender][_value];
-        require(balances[_from][_value] >= 1 && allowance >= 1);
-        balances[_to][_value] += 1;
-        balances[_from][_value] -= 1;
-        if (allowance < MAX_UINT256) {
-            allowed[_from][msg.sender][_value] -= 1;
-        }
-        emit Transfer(_from, _to, _value); //solhint-disable-line indent, no-unused-vars
-        return true;
     }
 
     function approve(address _spender, uint256 _value) public returns(bool success) {
@@ -112,21 +83,22 @@ contract BasicToken is ERC20Basic {
 }
 
 
-contract ERC891 is Ownable, ERC20Basic, BasicToken {
+contract ERC891 is Ownable, ERC20Basic, BasicToken, Pausable {
+    uint256 constant private MAX_UINT256 = 2 ** 256 - 1;
 
     using ECRecovery
     for bytes32;
 
     // Events 
     event Mine(address indexed to, uint256 amount);
-    event Check(address a);
     event MiningFinished();
 
 
     // Settings
-    bool public miningFinished = false;
-    uint256 public fee;
-    uint256 diffMask = 3;
+    bool public miningFinished  = false;
+    uint256 public fee          = 300;      // Unsed
+    uint256 diffMask            = 3;
+    address public tradeTracker = 0x0;
 
 
     // Collection Database
@@ -150,24 +122,24 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken {
         lookup[12] = 8;
         lookup[11] = 12;
         lookup[10] = 10;
-        lookup[9] = 3;
-        lookup[8] = 4;
-        lookup[8] = 10;
-        lookup[7] = 7;
-        lookup[6] = 26;
-        lookup[3] = 5;
+        lookup[9]  = 3;
+        lookup[8]  = 4;
+        lookup[8]  = 10;
+        lookup[7]  = 7;
+        lookup[6]  = 26;
+        lookup[3]  = 5;
 
         acc[15] = 0;
         acc[13] = acc[15] + lookup[15];
         acc[12] = acc[13] + lookup[13];
         acc[11] = acc[12] + lookup[12];
         acc[10] = acc[11] + lookup[11];
-        acc[9] = acc[10] + lookup[10];
-        acc[8] = acc[9] + lookup[9];
-        acc[8] = acc[8] + lookup[8];
-        acc[7] = acc[8] + lookup[8];
-        acc[6] = acc[7] + lookup[7];
-        acc[3] = acc[6] + lookup[6];
+        acc[9]  = acc[10] + lookup[10];
+        acc[8]  = acc[9]  + lookup[9];
+        acc[8]  = acc[8]  + lookup[8];
+        acc[7]  = acc[8]  + lookup[8];
+        acc[6]  = acc[7]  + lookup[7];
+        acc[3]  = acc[6]  + lookup[6];
 
         rewardItemMapping = [16, 17, 19, 20, 21, 22, 23, 27, 28, 29, 30, 32, 33, 39, 41, 42, 43, 44, 46, 47, 48, 49, 50, 52, 54, 55, 56, 60, 66, 67, 69, 70, 72, 73, 74, 75, 79, 80, 81, 84, 85, 86, 88, 96, 98, 100, 116, 118, 129, 130, 11, 14, 24, 51, 53, 57, 82, 87, 97, 99, 101, 109, 114, 119, 35, 37, 71, 83, 89, 92, 95, 117, 12, 15, 40, 45, 58, 61, 64, 68, 77, 93, 102, 111, 25, 26, 62, 63, 104, 105, 108, 110, 112, 128, 78, 120, 124, 36, 90, 91, 132, 106, 107, 113, 115, 122, 123, 126, 127, 147, 148, 1, 4, 7, 125, 131, 133, 143, 2, 3, 5, 6, 8, 9, 18, 31, 34, 38, 59, 65, 76, 94, 103, 121, 134, 135, 136, 137, 138, 139, 140, 141, 142, 144, 145, 146, 149, 150, 151];
     }
@@ -185,14 +157,14 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken {
         
     ----------------------------------------------------- */
 
-    function claim() canMine public {
+    function claim() canMine whenNotPaused public {
         uint256 reward = checkFind(msg.sender);
         require(!claimed[msg.sender]);
 
         require(reward != 9000);
 
         claimed[msg.sender] = true;
-        balances[msg.sender][reward] = balances[msg.sender][reward] + 1;
+        balances.addBalance(msg.sender, reward, 1);
 
         emit Mine(msg.sender, reward);
     }
@@ -205,14 +177,16 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken {
 
       ----------------------------------------------------- */
 
-    function claimFor(address _address) canMine public {
+    function claimFor(address _address) canMine whenNotPaused public {
         uint256 reward = checkFind(_address);
         require(!claimed[_address]);
 
         require(reward != 9000);
 
         claimed[_address] = true;
-        balances[_address][reward] = balances[_address][reward] + 1;
+        
+        uint256 newBalance = balances.getBalance(_address, reward) + 1;
+        balances.setBalance(_address, reward, newBalance);
 
         emit Mine(_address, reward);
     }
@@ -261,22 +235,44 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken {
         
         - Sends the item with ID from value.
         - Doesn't allow sending to 0x0.
-        - Requires a registration fee sent to owner.
-        - Returns leftover eth to the sender.
-        - If the address has an item, it is claimed.
-        - Max balance for each item is 1000.
-        
+        - If the address has an item, it attempts to claim.
+
     ----------------------------------------------------- */
 
-    function transfer(address _to, uint256 _value) public returns(bool) {
+    function transfer(address _to, uint256 _value) whenNotPaused public returns(bool) {
         require(_to != address(0));
 
         if (!claimed[msg.sender] && checkFind(msg.sender) != 9000) claim();
-        require(balances[msg.sender][_value] > 0);
+        require(balances.getBalance(msg.sender, _value) > 0);
 
-        balances[msg.sender][_value]--;
-        balances[_to][_value]++;
+        balances.subBalance(msg.sender, _value, 1);
+        balances.addBalance(_to, _value, 1);
+        
         emit Transfer(msg.sender, _to, _value);
+        return true;
+    }
+    
+    /* -----------------------------------------------------
+        transferFrom(address,address,uint256) returns (bool)
+            (API friendly)
+        
+        - Sends the item with ID from value.
+        - Doesn't allow sending to 0x0.
+        - Adds an exception for the special trade address.
+
+    ----------------------------------------------------- */
+    
+    function transferFrom(address _from, address _to, uint256 _value) whenNotPaused public returns(bool success) {
+        uint256 allowance = allowed[_from][_to][_value];
+        require(balances.getBalance(_from, _value) >= 1 && (allowance >= 1 || msg.sender == tradeTracker));
+        
+        balances.addBalance(_to, _value, 1);
+        balances.subBalance(_from, _value, 1);
+        
+        if (allowance < MAX_UINT256) {
+            allowed[_from][msg.sender][_value] -= 1;
+        }
+        emit Transfer(_from, _to, _value); //solhint-disable-line indent, no-unused-vars
         return true;
     }
 
@@ -289,25 +285,18 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken {
         
     ----------------------------------------------------- */
 
-    function() payable public {
-        require(msg.value >= fee);
-        owner.transfer(fee);
-        msg.sender.transfer(msg.value - fee);
-
-        feepaid[msg.sender] = true;
-
-
+    function() payable whenNotPaused public {
         bytes32 hash = bytes32(keccak256(abi.encodePacked(
             "\x19Ethereum Signed Message:\n32",
             keccak256(abi.encodePacked(msg.sender))
         )));
-        address sender = hash.recover(msg.data);
-        uint256 reward = checkFind(sender);
+        address minedAddress = hash.recover(msg.data);
+        uint256 reward = checkFind(minedAddress);
 
-        claimFor(sender);
+        claimFor(minedAddress);
 
-        allowed[sender][msg.sender][reward] = 1;
-        transferFrom(sender, msg.sender, reward);
+        allowed[minedAddress][msg.sender][reward] = 1;
+        transferFrom(minedAddress, msg.sender, reward);
     }
 
 
@@ -320,12 +309,12 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken {
         
     ----------------------------------------------------- */
 
-    function balanceOf(address _add) view public returns(uint256[152]) {
+    function balanceOf(address _add) whenNotPaused view public returns(uint256[152]) {
         uint256[152] memory collection;
         collection[0] = uint256(-1);
 
         for (uint256 i = 1; i <= 151; i++) {
-            collection[i] = balances[_add][i];
+            collection[i] = balances.getBalance(_add, i);
         }
 
         return collection;
@@ -350,22 +339,31 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken {
     }
 }
 
-
-
 contract Poketh is ERC891 {
-    string public constant name = "Poketh";
-    string public constant symbol = "PKTH";
-    uint256 public constant decimals = 0;
+    string public constant name         = "Poketh";
+    string public constant symbol       = "PKTH";
+    uint256 public constant decimals    = 0;
+    uint256 public constant version     = 0;
 
-    constructor(uint256 _fee) public {
-        fee = _fee * 1000000000000; // 0.001 finney
-    }
-
-    function setFee(uint256 _fee) onlyOwner public {
-        fee = _fee * 1000000000000;
+    constructor(address _balancesAddress) public {
+        if(_balancesAddress != address(0)){
+            pointToBalancesAt(_balancesAddress);
+        } else {
+            balances = new Balances();
+        }
     }
 
     function setDifficulty(uint256 _diffMask) public {
         diffMask = _diffMask;
     }
+    
+    function pointToBalancesAt(address _balancesAddress) onlyOwner public {
+        balances = Balances(_balancesAddress);
+    }
+    
+    function upgradeTo(address _upgrade) onlyOwner public {
+        pause();
+        balances.transferOwnership(_upgrade);
+    }
+    
 }
