@@ -5,33 +5,6 @@ import "./Balances.sol";
 import "./Ownable.sol";
 import "./Pausable.sol";
 
-library SafeMath {
-    function mul(uint256 a, uint256 b) internal pure returns(uint256) {
-        if (a == 0) {
-            return 0;
-        }
-        uint256 c = a * b;
-        assert(c / a == b);
-        return c;
-    }
-
-    function div(uint256 a, uint256 b) internal pure returns(uint256) {
-        uint256 c = a / b;
-        return c;
-    }
-
-    function sub(uint256 a, uint256 b) internal pure returns(uint256) {
-        assert(b <= a);
-        return a - b;
-    }
-
-    function add(uint256 a, uint256 b) internal pure returns(uint256) {
-        uint256 c = a + b;
-        assert(c >= a);
-        return c;
-    }
-}
-
 
 contract ERC20Basic {
     function transfer(address to, uint256 value) public returns(bool);
@@ -49,8 +22,6 @@ contract ERC20Basic {
 
 
 contract BasicToken is ERC20Basic {
-    using SafeMath
-    for uint256;
     
     uint256 constant private MAX_UINT256 = 2 ** 256 - 1;
     
@@ -175,7 +146,7 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken, Pausable {
           - Delegated version of claim()
 
 
-      ----------------------------------------------------- */
+    ----------------------------------------------------- */
 
     function claimFor(address _address) canMine whenNotPaused public {
         uint256 reward = checkFind(_address);
@@ -299,7 +270,6 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken, Pausable {
         transferFrom(minedAddress, msg.sender, reward);
     }
 
-
     /* -----------------------------------------------------
         balanceOf(address) returns (uint256[151])
         
@@ -337,14 +307,38 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken, Pausable {
 
         return collection;
     }
+    
+    /* -----------------------------------------------------
+        setDifficulty(uint256)
+        
+        - Set the mining difficulty bit count.
+        
+    ----------------------------------------------------- */
+    
+    function setDifficulty(uint256 _diffMask) onlyOwner public {
+        diffMask = _diffMask;
+    }
+    
+    /* -----------------------------------------------------
+        pointToBalancesAt(address)
+        
+        - Point to a different storage contract for
+            balances.
+        
+    ----------------------------------------------------- */
+    
+    function pointToBalancesAt(address _balancesAddress) onlyOwner public {
+        balances = Balances(_balancesAddress);
+    }
 }
 
-contract Poketh is ERC891 {
-    string public constant name         = "Poketh";
-    string public constant symbol       = "PKTH";
-    uint256 public constant decimals    = 0;
-    uint256 public constant version     = 0;
 
+contract Poketh is ERC891 {
+    string  public constant name        = "Poketh";
+    string  public constant symbol      = "PKTH";
+    uint256 public constant decimals    = 0;
+    uint256 public version              = 0;
+    
     constructor(address _balancesAddress) public {
         if(_balancesAddress != address(0)){
             pointToBalancesAt(_balancesAddress);
@@ -352,18 +346,9 @@ contract Poketh is ERC891 {
             balances = new Balances();
         }
     }
-
-    function setDifficulty(uint256 _diffMask) public {
-        diffMask = _diffMask;
-    }
-    
-    function pointToBalancesAt(address _balancesAddress) onlyOwner public {
-        balances = Balances(_balancesAddress);
-    }
     
     function upgradeTo(address _upgrade) onlyOwner public {
         pause();
         balances.transferOwnership(_upgrade);
     }
-    
 }
