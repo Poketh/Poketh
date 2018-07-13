@@ -65,8 +65,19 @@ contract Balances is Ownable {
         balances[_account][_class][remove.prevID].nextID = remove.nextID;
         balances[_account][_class][remove.nextID].prevID = remove.prevID;
     }
-    function getBalance(address _account, uint256 _class, uint256 _amount) public view returns(address[]) {
-        address[] memory returnIDs = new address[](_amount);
+    function getBalanceCount(address _account, uint256 _class) public view returns(uint256) {
+        uint256 idx = 0;
+        address t;
+        t = balances[_account][_class][0x0].nextID;
+        
+        while(t != 0x0){
+            t = balances[_account][_class][t].nextID;
+        }
+        
+        return idx;
+    }
+    function getBalanceClass(address _account, uint256 _class) public view returns(address[]) {
+        address[] memory returnIDs = new address[](getBalanceCount(_account, _class));
         uint256 idx = 0;
         address t;
         t = balances[_account][_class][0x0].nextID;
@@ -77,5 +88,17 @@ contract Balances is Ownable {
         }
         
         return returnIDs;
+    }
+    function checkValid(address _account, uint256 _class, address _ID) public view returns(bool) {
+        bool isValid = false;
+        address t;
+        t = balances[_account][_class][0x0].nextID;
+        
+        while(t != 0x0){
+            isValid = (t == _ID) || isValid;
+            t = balances[_account][_class][t].nextID;
+        }
+        
+        return isValid;
     }
 }
