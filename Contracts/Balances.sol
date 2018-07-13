@@ -47,14 +47,16 @@ contract Balances is Ownable {
     function addBalance(address _account, uint256 _class, address _ID) onlyOwner public {
         require(msg.sender == ownerContract && _ID != 0x0);
         
-        Node memory head    = balances[_account][_class][0x0];
+        Node memory root    = balances[_account][_class][0x0];
+        Node memory head    = balances[_account][_class][root.nextID];
         Node memory insert  = Node(_ID, 0x0, head.selfID);
+        
         head.prevID         = insert.selfID;
+        root.nextID         = insert.selfID;
         
-        balances[_account][_class][0x0] = insert;
-        
-        if(insert.nextID != 0x0)
-            balances[_account][_class][insert.nextID] = head;
+        balances[_account][_class][insert.selfID]   = insert;
+        balances[_account][_class][head.selfID]     = head;
+        balances[_account][_class][root.selfID]     = root;
     }
     function subBalance(address _account, uint256 _class, address _ID) onlyOwner public {
         require(msg.sender == ownerContract && _ID != 0x0);
@@ -63,15 +65,15 @@ contract Balances is Ownable {
         balances[_account][_class][remove.prevID].nextID = remove.nextID;
         balances[_account][_class][remove.nextID].prevID = remove.prevID;
     }
-    function getBalance(address _account, uint256 _class) public view returns(address[]) {
-        address[] memory returnIDs = new address[](100);
+    function getBalance(address _account, uint256 _class, uint256 _amount) public view returns(address[]) {
+        address[] memory returnIDs = new address[](_amount);
         uint256 idx = 0;
-        Node memory t;
-        t = balances[_account][_class][0x0];
+        address t;
+        t = balances[_account][_class][0x0].nextID;
         
-        while(t.selfID != 0x0){
-            returnIDs[idx++] = t.selfID;
-            t = balances[_account][_class][t.nextID];
+        while(t != 0x0){
+            returnIDs[idx++] = t;
+            t = balances[_account][_class][t].nextID;
         }
         
         return returnIDs;
