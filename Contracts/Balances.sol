@@ -44,6 +44,7 @@ contract Balances is Ownable {
     constructor() public {
         ownerContract = msg.sender;
     }
+    
     function addBalance(address _account, uint256 _class, address _ID) onlyOwner public {
         require(msg.sender == ownerContract && _ID != 0x0);
         
@@ -58,6 +59,7 @@ contract Balances is Ownable {
         balances[_account][_class][head.selfID]     = head;
         balances[_account][_class][root.selfID]     = root;
     }
+    
     function subBalance(address _account, uint256 _class, address _ID) onlyOwner public {
         require(msg.sender == ownerContract && _ID != 0x0);
         
@@ -65,6 +67,7 @@ contract Balances is Ownable {
         balances[_account][_class][remove.prevID].nextID = remove.nextID;
         balances[_account][_class][remove.nextID].prevID = remove.prevID;
     }
+    
     function getBalanceCount(address _account, uint256 _class) public view returns(uint256) {
         uint256 idx = 0;
         address t;
@@ -76,6 +79,7 @@ contract Balances is Ownable {
         
         return idx;
     }
+    
     function getBalanceClass(address _account, uint256 _class) public view returns(address[]) {
         address[] memory returnIDs = new address[](getBalanceCount(_account, _class));
         uint256 idx = 0;
@@ -89,6 +93,7 @@ contract Balances is Ownable {
         
         return returnIDs;
     }
+    
     function checkValid(address _account, uint256 _class, address _ID) public view returns(bool) {
         bool isValid = false;
         address t;
@@ -100,5 +105,20 @@ contract Balances is Ownable {
         }
         
         return isValid;
+    }
+    
+    function checkValid(address _account, address _ID) public view returns(bool,uint256) {
+        address t;
+        
+        for(uint256 _class = 0; _class < 152; _class++){
+            t = balances[_account][_class][0x0].nextID;
+        
+            while(t != 0x0){
+                if(t == _ID) return (true,_class);
+                t = balances[_account][_class][t].nextID;
+            }
+        }
+        
+        return (false, 9000);
     }
 }
