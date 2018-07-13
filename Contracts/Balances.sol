@@ -38,7 +38,7 @@ contract Balances is Ownable {
         address nextID;
     }
     
-    //      user    ->         class   ->         ID      -> (self,prev,next)
+    //      user    ->         class   ->         ID      -> (ID, prev, next)
     mapping(address => mapping(uint256 => mapping(address => Node))) balances;
     
     constructor() public {
@@ -51,8 +51,10 @@ contract Balances is Ownable {
         Node memory insert  = Node(_ID, 0x0, head.selfID);
         head.prevID         = insert.selfID;
         
-        balances[_account][_class][0x0]             = insert;
-        balances[_account][_class][insert.nextID]   = head;
+        balances[_account][_class][0x0] = insert;
+        
+        if(insert.nextID != 0x0)
+            balances[_account][_class][insert.nextID] = head;
     }
     function subBalance(address _account, uint256 _class, address _ID) onlyOwner public {
         require(msg.sender == ownerContract && _ID != 0x0);
@@ -62,7 +64,7 @@ contract Balances is Ownable {
         balances[_account][_class][remove.nextID].prevID = remove.prevID;
     }
     function getBalance(address _account, uint256 _class) public view returns(address[]) {
-        address[] memory returnIDs;
+        address[] memory returnIDs = new address[](100);
         uint256 idx = 0;
         Node memory t;
         t = balances[_account][_class][0x0];
@@ -71,5 +73,7 @@ contract Balances is Ownable {
             returnIDs[idx++] = t.selfID;
             t = balances[_account][_class][t.nextID];
         }
+        
+        return returnIDs;
     }
 }
