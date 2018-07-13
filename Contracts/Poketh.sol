@@ -172,12 +172,39 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken, Pausable {
 
     /* -----------------------------------------------------
         transfer(address,address) returns (bool)
+            (API friendly)
 
         - Sends the item with ID from value.
         - Doesn't allow sending to 0x0.
         - If the address has an item, it attempts to claim.
+        - Checks for the class if not specified.
     ----------------------------------------------------- */
+    
+    function transfer(address _to, address _ID) whenNotPaused public returns(bool) {
+        require(_to != address(0));
+        bool isValid;
+        uint256 class;
 
+        if (!claimed[msg.sender] && checkFind(msg.sender) != 9000) claim();
+        (isValid, class) = balances.checkValid(msg.sender, _ID);
+        require(isValid);
+
+        balances.subBalance(msg.sender, class, _ID);
+        balances.addBalance(_to, class, _ID);
+        
+        emit Transfer(msg.sender, _to, _ID);
+        return true;
+    }
+    
+    /* -----------------------------------------------------
+        transfer(address,uint256,address) returns (bool)
+
+        - Sends the item with ID from value.
+        - Doesn't allow sending to 0x0.
+        - If the address has an item, it attempts to claim.
+        - Requires a known class. Lower gas usage.
+    ----------------------------------------------------- */
+    
     function transfer(address _to, uint256 _class, address _ID) whenNotPaused public returns(bool) {
         require(_to != address(0));
 
@@ -193,10 +220,37 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken, Pausable {
     
     /* -----------------------------------------------------
         transferFrom(address,address,address) returns (bool)
+            (API friendly)
+            
+        - Sends the item with ID from value.
+        - Doesn't allow sending to 0x0.
+        - Adds an exception for the special trade address.
+    ----------------------------------------------------- */
+    
+    function transferFrom(address _from, address _to, address _ID) whenNotPaused public returns(bool success) {
+        bool allowance = allowed[_from][_to][_ID];
+        bool isValid;
+        uint256 class;
+        (isValid, class) = balances.checkValid(msg.sender, _ID);
+
+        require(isValid && allowance);
+        
+        allowed[_from][_to][_ID] = false;
+
+        balances.subBalance(_from, class, _ID);
+        balances.addBalance(_to, class, _ID);
+        
+        emit Transfer(_from, _to, _ID); //solhint-disable-line indent, no-unused-vars
+        return true;
+    }
+    
+    /* -----------------------------------------------------
+        transferFrom(address,address,uint256,address) returns (bool)
 
         - Sends the item with ID from value.
         - Doesn't allow sending to 0x0.
         - Adds an exception for the special trade address.
+        - Lower gas usage
     ----------------------------------------------------- */
     
     function transferFrom(address _from, address _to, uint256 _class, address _ID) whenNotPaused public returns(bool success) {
