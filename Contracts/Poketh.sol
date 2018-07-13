@@ -45,7 +45,7 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken, Pausable {
     for bytes32;
 
     // Events 
-    event Mine(address indexed to, uint256 amount);
+    event Mine(address indexed to, uint256 amount, address ID);
 
 
     // Settings
@@ -103,15 +103,15 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken, Pausable {
     ----------------------------------------------------- */
 
     function claim() whenNotPaused public {
-        uint256 reward = checkFind(msg.sender);
+        uint256 rewardClass = checkFind(msg.sender);
         require(!claimed[msg.sender]);
 
-        require(reward != 9000);
+        require(rewardClass != 9000);
 
         claimed[msg.sender] = true;
-        balances.addBalance(msg.sender, reward, 1);
+        balances.addBalance(msg.sender, rewardClass, msg.sender);
 
-        emit Mine(msg.sender, reward);
+        emit Mine(msg.sender, rewardClass, msg.sender);
     }
 
     /* -----------------------------------------------------
@@ -121,16 +121,16 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken, Pausable {
     ----------------------------------------------------- */
 
     function claimFor(address _address) whenNotPaused public {
-        uint256 reward = checkFind(_address);
+        uint256 rewardClass = checkFind(_address);
         require(!claimed[_address]);
 
-        require(reward != 9000);
+        require(rewardClass != 9000);
 
         claimed[_address] = true;
         
-        balances.addBalance(_address, reward, 1);
+        balances.addBalance(_address, rewardClass, _address);
 
-        emit Mine(_address, reward);
+        emit Mine(_address, rewardClass, _address);
     }
 
     /* -----------------------------------------------------
