@@ -8,51 +8,35 @@ import "./Pausable.sol";
 
 contract ERC20Basic {
     function transfer(address to, uint256 value) public returns(bool);
-
     function transferFrom(address _from, address _to, uint256 _value) public returns(bool success);
-
     function approve(address _spender, uint256 _value) public returns(bool success);
-
     function allowance(address _owner, address _spender) public view returns(uint256[152]);
 
-    event Transfer(address indexed from, address indexed to, uint256 value);
-    event Approval(address indexed _owner, address indexed _spender, uint256 _value);
-
+    event Transfer(address indexed from, address indexed to, address ID);
+    event Approval(address indexed _owner, address indexed _spender, address ID);
 }
-
 
 contract BasicToken is ERC20Basic {
     
     uint256 constant private MAX_UINT256 = 2 ** 256 - 1;
     
     Balances balances;
-    mapping(address => mapping(address => mapping(uint256 => uint256))) public allowed;
-
+    mapping(address => mapping(address => mapping(address => bool))) public allowed;
 
     uint256 totalSupply_;
 
     function totalSupply() public view returns(uint256) {
         return totalSupply_;
     }
-
-    function approve(address _spender, uint256 _value) public returns(bool success) {
-        allowed[msg.sender][_spender][_value] = 1;
-        emit Approval(msg.sender, _spender, _value); //solhint-disable-line indent, no-unused-vars
+    function approve(address _spender, address _ID) public returns(bool success) {
+        allowed[msg.sender][_spender][_ID] = true;
+        emit Approval(msg.sender, _spender, _ID); //solhint-disable-line indent, no-unused-vars
         return true;
     }
-
-    function allowance(address _owner, address _spender) public view returns(uint256[152]) {
-        uint256[152] memory collection;
-        collection[0] = uint256(-1);
-
-        for (uint256 i = 1; i <= 151; i++) {
-            collection[i] = allowed[_owner][_spender][i];
-        }
-
-        return collection;
+    function allowance(address _owner, address _spender, address _ID) public view returns(bool) {
+        return allowed[_owner][_spender][_ID];
     }
 }
-
 
 contract ERC891 is Ownable, ERC20Basic, BasicToken, Pausable {
     uint256 constant private MAX_UINT256 = 2 ** 256 - 1;
@@ -62,12 +46,9 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken, Pausable {
 
     // Events 
     event Mine(address indexed to, uint256 amount);
-    event MiningFinished();
 
 
     // Settings
-    bool public miningFinished  = false;
-    uint256 public fee          = 300;      // Unsed
     uint256 diffMask            = 3;
     address public tradeTracker = 0x0;
 
@@ -81,11 +62,6 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken, Pausable {
 
     // Item mapping from codes to IDs
     uint8[151] private rewardItemMapping;
-
-    modifier canMine {
-        require(!miningFinished);
-        _;
-    }
 
     constructor() public {
         lookup[15] = 52;
@@ -124,11 +100,9 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken, Pausable {
         i.e. not error 9000
         
         reward          <- item ID from checkFind(sender)
-
-        
     ----------------------------------------------------- */
 
-    function claim() canMine whenNotPaused public {
+    function claim() whenNotPaused public {
         uint256 reward = checkFind(msg.sender);
         require(!claimed[msg.sender]);
 
@@ -144,11 +118,9 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken, Pausable {
           claimFor(address) 
           
           - Delegated version of claim()
-
-
     ----------------------------------------------------- */
 
-    function claimFor(address _address) canMine whenNotPaused public {
+    function claimFor(address _address) whenNotPaused public {
         uint256 reward = checkFind(_address);
         require(!claimed[_address]);
 
@@ -156,8 +128,7 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken, Pausable {
 
         claimed[_address] = true;
         
-        uint256 newBalance = balances.getBalance(_address, reward) + 1;
-        balances.setBalance(_address, reward, newBalance);
+        balances.addBalance(_address, reward, 1);
 
         emit Mine(_address, reward);
     }
@@ -180,7 +151,6 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken, Pausable {
         Apply the diff mask by cheking the single case 
         2^(diffMask)-1 AND the first 16 bits of the address
         which needs to be 0.
-        
     ----------------------------------------------------- */
 
     function checkFind(address _add) view public returns(uint16) {
@@ -201,49 +171,44 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken, Pausable {
     }
 
     /* -----------------------------------------------------
-        transfer(address,uint256) returns (bool)
-            (API friendly)
-        
+        transfer(address,address) returns (bool)
+
         - Sends the item with ID from value.
         - Doesn't allow sending to 0x0.
         - If the address has an item, it attempts to claim.
-
     ----------------------------------------------------- */
 
-    function transfer(address _to, uint256 _value) whenNotPaused public returns(bool) {
+    function transfer(address _to, uint256 _class, address _ID) whenNotPaused public returns(bool) {
         require(_to != address(0));
 
         if (!claimed[msg.sender] && checkFind(msg.sender) != 9000) claim();
-        require(balances.getBalance(msg.sender, _value) > 0);
+        require(balances.checkValid(msg.sender, _class, _ID));
 
-        balances.subBalance(msg.sender, _value, 1);
-        balances.addBalance(_to, _value, 1);
+        balances.subBalance(msg.sender, _class, _ID);
+        balances.addBalance(_to, _class, _ID);
         
-        emit Transfer(msg.sender, _to, _value);
+        emit Transfer(msg.sender, _to, _ID);
         return true;
     }
     
     /* -----------------------------------------------------
-        transferFrom(address,address,uint256) returns (bool)
-            (API friendly)
-        
+        transferFrom(address,address,address) returns (bool)
+
         - Sends the item with ID from value.
         - Doesn't allow sending to 0x0.
         - Adds an exception for the special trade address.
-
     ----------------------------------------------------- */
     
-    function transferFrom(address _from, address _to, uint256 _value) whenNotPaused public returns(bool success) {
-        uint256 allowance = allowed[_from][_to][_value];
-        require(balances.getBalance(_from, _value) >= 1 && (allowance >= 1 || msg.sender == tradeTracker));
+    function transferFrom(address _from, address _to, uint256 _class, address _ID) whenNotPaused public returns(bool success) {
+        bool allowance = allowed[_from][_to][_ID];
+        require(balances.checkValid(_from, _class, _ID) && allowance);
         
-        balances.addBalance(_to, _value, 1);
-        balances.subBalance(_from, _value, 1);
+        allowed[_from][_to][_ID] = false;
+
+        balances.subBalance(_from, _class, _ID);
+        balances.addBalance(_to, _class, _ID);
         
-        if (allowance < MAX_UINT256) {
-            allowed[_from][msg.sender][_value] -= 1;
-        }
-        emit Transfer(_from, _to, _value); //solhint-disable-line indent, no-unused-vars
+        emit Transfer(_from, _to, _ID); //solhint-disable-line indent, no-unused-vars
         return true;
     }
 
@@ -253,7 +218,6 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken, Pausable {
         
         - Pays the fee to the owner and returns the
         excess to the sender.
-        
     ----------------------------------------------------- */
 
     function() payable whenNotPaused public {
@@ -266,7 +230,7 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken, Pausable {
 
         claimFor(minedAddress);
 
-        allowed[minedAddress][msg.sender][reward] = 1;
+        allowed[minedAddress][msg.sender][minedAddress] = true;
         transferFrom(minedAddress, msg.sender, reward);
     }
 
@@ -275,8 +239,7 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken, Pausable {
         
         - Take the balance of the address, store into a 
         memory type and return the collection.
-        - The collection runs from ID 1 to 151.
-        
+        - The collection runs from class 1 to 151.
     ----------------------------------------------------- */
 
     function balanceOf(address _add) whenNotPaused view public returns(uint256[152]) {
@@ -284,10 +247,20 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken, Pausable {
         collection[0] = uint256(-1);
 
         for (uint256 i = 1; i <= 151; i++) {
-            collection[i] = balances.getBalance(_add, i);
+            collection[i] = balances.getBalanceCount(_add, i);
         }
 
         return collection;
+    }
+    
+    /* -----------------------------------------------------
+        balanceOfClass(address) returns (address[])
+        
+        - Get the IDs by class
+    ----------------------------------------------------- */
+
+    function balanceOfClass(address _add, uint256 _class) whenNotPaused view public returns(address[]) {
+        return balances.getBalanceClass(_add, _class);
     }
 
     /* -----------------------------------------------------
@@ -295,7 +268,6 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken, Pausable {
         
         - Get the mapping for the rarity tiers.
         - The mapping runs from 0 to 150.
-        
     ----------------------------------------------------- */
 
     function itemMapping() view public returns(uint256[151]) {
@@ -312,7 +284,6 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken, Pausable {
         setDifficulty(uint256)
         
         - Set the mining difficulty bit count.
-        
     ----------------------------------------------------- */
     
     function setDifficulty(uint256 _diffMask) onlyOwner public {
@@ -324,7 +295,6 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken, Pausable {
         
         - Point to a different storage contract for
             balances.
-        
     ----------------------------------------------------- */
     
     function pointToBalancesAt(address _balancesAddress) onlyOwner public {
