@@ -11,17 +11,14 @@ library SafeMath {
         assert(c / a == b);
         return c;
     }
-
     function div(uint256 a, uint256 b) internal pure returns(uint256) {
         uint256 c = a / b;
         return c;
     }
-
     function sub(uint256 a, uint256 b) internal pure returns(uint256) {
         assert(b <= a);
         return a - b;
     }
-
     function add(uint256 a, uint256 b) internal pure returns(uint256) {
         uint256 c = a + b;
         assert(c >= a);
@@ -34,28 +31,45 @@ contract Balances is Ownable {
     for uint256;
     
     address public ownerContract;
-    mapping(address => mapping(uint256 => uint256)) balances;
+    
+    struct Node {
+        address selfID;
+        address prevID;
+        address nextID;
+    }
+    
+    //      user    ->         class   ->         ID      -> (self,prev,next)
+    mapping(address => mapping(uint256 => mapping(address => Node))) balances;
     
     constructor() public {
         ownerContract = msg.sender;
     }
-    
-    function setBalance(address _add, uint256 _x, uint256 _y) onlyOwner public {
-        require(msg.sender == ownerContract);
-        balances[_add][_x] = _y;
+    function addBalance(address _account, uint256 _class, address _ID) onlyOwner public {
+        require(msg.sender == ownerContract && _ID != 0x0);
+        
+        Node memory head    = balances[_account][_class][0x0];
+        Node memory insert  = Node(_ID, 0x0, head.selfID);
+        head.prevID         = insert.selfID;
+        
+        balances[_account][_class][0x0]             = insert;
+        balances[_account][_class][insert.nextID]   = head;
     }
-    
-    function addBalance(address _add, uint256 _x, uint256 _delta) onlyOwner public {
-        require(msg.sender == ownerContract);
-        balances[_add][_x] = balances[_add][_x].add(_delta);
+    function subBalance(address _account, uint256 _class, address _ID) onlyOwner public {
+        require(msg.sender == ownerContract && _ID != 0x0);
+        
+        Node memory remove  = balances[_account][_class][_ID];
+        balances[_account][_class][remove.prevID].nextID = remove.nextID;
+        balances[_account][_class][remove.nextID].prevID = remove.prevID;
     }
-    
-    function subBalance(address _add, uint256 _x, uint256 _delta) onlyOwner public {
-        require(msg.sender == ownerContract);
-        balances[_add][_x] = balances[_add][_x].sub(_delta);
-    }
-    
-    function getBalance(address _add, uint256 _x) public view returns(uint256) {
-        return balances[_add][_x];
+    function getBalance(address _account, uint256 _class) public view returns(address[]) {
+        address[] memory returnIDs;
+        uint256 idx = 0;
+        Node memory t;
+        t = balances[_account][_class][0x0];
+        
+        while(t.selfID != 0x0){
+            returnIDs[idx++] = t.selfID;
+            t = balances[_account][_class][t.nextID];
+        }
     }
 }
