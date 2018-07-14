@@ -69,11 +69,11 @@ contract Balances is Ownable {
     }
     
     function getBalanceCount(address _account, uint256 _class) public view returns(uint256) {
-        uint256 idx = 0;
+        uint256 idx;
         address t;
         t = balances[_account][_class][0x0].nextID;
         
-        while(t != 0x0){
+        for(idx = 0; t != 0x0; idx++){
             t = balances[_account][_class][t].nextID;
         }
         
@@ -82,12 +82,12 @@ contract Balances is Ownable {
     
     function getBalanceClass(address _account, uint256 _class) public view returns(address[]) {
         address[] memory returnIDs = new address[](getBalanceCount(_account, _class));
-        uint256 idx = 0;
+        uint256 idx;
         address t;
         t = balances[_account][_class][0x0].nextID;
         
-        while(t != 0x0){
-            returnIDs[idx++] = t;
+        for(idx = 0; t != 0x0; idx++){
+            returnIDs[idx] = t;
             t = balances[_account][_class][t].nextID;
         }
         
