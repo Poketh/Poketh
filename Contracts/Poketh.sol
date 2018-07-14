@@ -7,10 +7,6 @@ import "./Pausable.sol";
 
 
 contract ERC20Basic {
-    function transfer(address to, uint256 value) public returns(bool);
-    function transferFrom(address _from, address _to, uint256 _value) public returns(bool success);
-    function approve(address _spender, uint256 _value) public returns(bool success);
-    function allowance(address _owner, address _spender) public view returns(uint256[152]);
 
     event Transfer(address indexed from, address indexed to, address ID);
     event Approval(address indexed _owner, address indexed _spender, address ID);
@@ -267,25 +263,23 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken, Pausable {
     }
 
     /* -----------------------------------------------------
-        fallback
-            (API friendly)
-        
-        - Pays the fee to the owner and returns the
-        excess to the sender.
+        claimWithSignature(bytes)
+
+        - Claim via eth signed messages.
     ----------------------------------------------------- */
 
-    function() payable whenNotPaused public {
+    function claimWithSignature(bytes _sig) whenNotPaused public {
         bytes32 hash = bytes32(keccak256(abi.encodePacked(
             "\x19Ethereum Signed Message:\n32",
             keccak256(abi.encodePacked(msg.sender))
         )));
-        address minedAddress = hash.recover(msg.data);
+        address minedAddress = hash.recover(_sig);
         uint256 reward = checkFind(minedAddress);
 
         claimFor(minedAddress);
 
         allowed[minedAddress][msg.sender][minedAddress] = true;
-        transferFrom(minedAddress, msg.sender, reward);
+        transferFrom(minedAddress, msg.sender, reward, minedAddress);
     }
 
     /* -----------------------------------------------------
