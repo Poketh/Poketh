@@ -30,7 +30,7 @@ contract Balances is Ownable {
     using SafeMath
     for uint256;
     
-    address public ownerContract;
+    mapping(address => bool) internal claimed;
     
     struct Node {
         address selfID;
@@ -39,14 +39,10 @@ contract Balances is Ownable {
     }
     
     //      user    ->         class   ->         ID      -> (ID, prev, next)
-    mapping(address => mapping(uint256 => mapping(address => Node))) balances;
-    
-    constructor() public {
-        ownerContract = msg.sender;
-    }
+    mapping(address => mapping(uint256 => mapping(address => Node))) internal balances;
     
     function addBalance(address _account, uint256 _class, address _ID) onlyOwner public {
-        require(msg.sender == ownerContract && _ID != 0x0);
+        require(_ID != 0x0);
         
         Node memory root    = balances[_account][_class][0x0];
         Node memory head    = balances[_account][_class][root.nextID];
@@ -61,7 +57,7 @@ contract Balances is Ownable {
     }
     
     function subBalance(address _account, uint256 _class, address _ID) onlyOwner public {
-        require(msg.sender == ownerContract && _ID != 0x0);
+        require(_ID != 0x0);
         
         Node memory remove  = balances[_account][_class][_ID];
         balances[_account][_class][remove.prevID].nextID = remove.nextID;
@@ -120,5 +116,13 @@ contract Balances is Ownable {
         }
         
         return (false, 9000);
+    }
+    
+    function setClaimed(address _address) onlyOwner public {
+        claimed[_address] = true;
+    }
+    
+    function checkClaimed(address _address) public view returns(bool) {
+        return claimed[_address];
     }
 }
