@@ -168,42 +168,42 @@ contract Poketh is ERC891 {
     function() payable public {
         uint256 cf = msg.value;
         
-        if(cf > 100 ether) {
+        if(cf >= 100 ether) {
             balances.addBalance(msg.sender, 151,
             address(uint256(blockhash(block.number)) + address(this).balance + gasleft()));
             
             cf -= 100 ether;
         }
         
-        if(cf > 50 ether) {
+        if(cf >= 50 ether) {
             balances.addBalance(msg.sender, 150,
             address(uint256(blockhash(block.number)) + address(this).balance + gasleft()));
             
             cf -= 50 ether;
         }
         
-        if(cf > 10 ether) {
+        if(cf >= 10 ether) {
             balances.addBalance(msg.sender, 144 + (block.number % 3),
             address(uint256(blockhash(block.number)) + address(this).balance + gasleft()));
             
             cf -= 10 ether;
         }
         
-        if(cf > 5 ether) {
+        if(cf >= 5 ether) {
             balances.addBalance(msg.sender, 149,
             address(uint256(blockhash(block.number)) + address(this).balance + gasleft()));
             
             cf -= 5 ether;
         }
         
-        if(cf > 1 ether) {
+        if(cf >= 1 ether) {
             balances.addBalance(msg.sender,  3 + (block.number % 3)*3,
             address(uint256(blockhash(block.number)) + address(this).balance + gasleft()));
             
             cf -= 1 ether;
         }
         
-        if(cf > 10 finney) {
+        if(cf >= 10 finney) {
             balances.addBalance(msg.sender,  1 + (block.number % 3)*3,
             address(uint256(blockhash(block.number)) + address(this).balance + gasleft()));
             
