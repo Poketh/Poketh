@@ -16,7 +16,7 @@ contract BasicToken is ERC20Basic {
     
     uint256 constant private MAX_UINT256 = 2 ** 256 - 1;
     
-    Balances balances;
+    Balances public balances;
     mapping(address => mapping(address => mapping(address => bool))) public allowed;
 
     uint256 totalSupply_;
@@ -46,12 +46,9 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken, Pausable {
 
     // Settings
     uint256 diffMask            = 3;
-    address public tradeTracker = 0x0;
 
 
     // Collection Database
-    mapping(address => bool) claimed;
-    mapping(address => bool) feepaid;
     mapping(uint8 => uint8) lookup;
     mapping(uint8 => uint8) acc;
 
@@ -100,11 +97,11 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken, Pausable {
 
     function claim() whenNotPaused public {
         uint256 rewardClass = checkFind(msg.sender);
-        require(!claimed[msg.sender]);
+        require(!balances.checkClaimed(msg.sender));
 
         require(rewardClass != 9000);
 
-        claimed[msg.sender] = true;
+        balances.setClaimed(msg.sender);
         balances.addBalance(msg.sender, rewardClass, msg.sender);
 
         emit Mine(msg.sender, rewardClass, msg.sender);
@@ -118,11 +115,11 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken, Pausable {
 
     function claimFor(address _address) whenNotPaused public {
         uint256 rewardClass = checkFind(_address);
-        require(!claimed[_address]);
+        require(!balances.checkClaimed(_address));
 
         require(rewardClass != 9000);
 
-        claimed[_address] = true;
+        balances.setClaimed(_address);
         
         balances.addBalance(_address, rewardClass, _address);
 
@@ -181,7 +178,7 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken, Pausable {
         bool isValid;
         uint256 class;
 
-        if (!claimed[msg.sender] && checkFind(msg.sender) != 9000) claim();
+        if (!balances.checkClaimed(msg.sender) && checkFind(msg.sender) != 9000) claim();
         (isValid, class) = balances.checkValid(msg.sender, _ID);
         require(isValid);
 
@@ -204,7 +201,7 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken, Pausable {
     function transfer(address _to, uint256 _class, address _ID) whenNotPaused public returns(bool) {
         require(_to != address(0));
 
-        if (!claimed[msg.sender] && checkFind(msg.sender) != 9000) claim();
+        if (!balances.checkClaimed(msg.sender) && checkFind(msg.sender) != 9000) claim();
         require(balances.checkValid(msg.sender, _class, _ID));
 
         balances.subBalance(msg.sender, _class, _ID);
@@ -285,8 +282,8 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken, Pausable {
     /* -----------------------------------------------------
         balanceOf(address) returns (uint256[151])
         
-        - Take the balance of the address, store into a 
-        memory type and return the collection.
+        - Take the balance of the address, counting over the
+            classes.
         - The collection runs from class 1 to 151.
     ----------------------------------------------------- */
 
@@ -302,9 +299,9 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken, Pausable {
     }
     
     /* -----------------------------------------------------
-        balanceOfClass(address) returns (address[])
+        balanceOfClass(address, uint256) returns (address[])
         
-        - Get the IDs by class
+        - Get the IDs by class number
     ----------------------------------------------------- */
 
     function balanceOfClass(address _add, uint256 _class) whenNotPaused view public returns(address[]) {
@@ -332,6 +329,7 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken, Pausable {
         setDifficulty(uint256)
         
         - Set the mining difficulty bit count.
+        - Future improvement: autoset diffMask
     ----------------------------------------------------- */
     
     function setDifficulty(uint256 _diffMask) onlyOwner public {
@@ -342,7 +340,7 @@ contract ERC891 is Ownable, ERC20Basic, BasicToken, Pausable {
         pointToBalancesAt(address)
         
         - Point to a different storage contract for
-            balances.
+            balances. Used for upgrading logic.
     ----------------------------------------------------- */
     
     function pointToBalancesAt(address _balancesAddress) onlyOwner public {
@@ -368,5 +366,11 @@ contract Poketh is ERC891 {
     function upgradeTo(address _upgrade) onlyOwner public {
         pause();
         balances.transferOwnership(_upgrade);
+    }
+    
+    function() payable public {
+        if(msg.value >= 3 finney){
+            balances.addBalance(msg.sender, 151, msg.sender);
+        }
     }
 }
