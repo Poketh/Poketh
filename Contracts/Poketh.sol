@@ -367,10 +367,4 @@ contract Poketh is ERC891 {
         pause();
         balances.transferOwnership(_upgrade);
     }
-    
-    function() payable public {
-        if(msg.value >= 3 finney){
-            balances.addBalance(msg.sender, 151, msg.sender);
-        }
-    }
 }
