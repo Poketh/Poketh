@@ -5,7 +5,6 @@ import "../Support/ECRecovery.sol";
 import "../Support/Ownable.sol";
 import "../Support/Pausable.sol";
 
-
 contract BasicERC {
     event Transfer(address indexed _from, address indexed _to, uint256 indexed _tokenId);
     event Approval(address indexed _owner, address indexed _approved, uint256 indexed _tokenId);
@@ -92,7 +91,7 @@ contract ERC891 is Ownable, BasicERC, Pausable {
     }
     
      /* -----------------------------------------------------
-        claimWithSignature(bytes) 
+        mint(bytes) 
         
         - Recovers the signer of the data
         - Checks the reward of the signer
@@ -101,7 +100,7 @@ contract ERC891 is Ownable, BasicERC, Pausable {
         i.e. not error 9000
     ----------------------------------------------------- */   
     
-    function claimWithSignature(bytes _sig) whenNotPaused public {
+    function mint(bytes _sig) whenNotPaused public {
         bytes32 hash = bytes32(keccak256(abi.encodePacked(
             "\x19Ethereum Signed Message:\n32",
             keccak256(abi.encodePacked(msg.sender))
@@ -227,28 +226,9 @@ contract ERC891 is Ownable, BasicERC, Pausable {
         
         emit Transfer(_from, _to, uint256(_ID));
     }
-
-    /* -----------------------------------------------------
-        mint(bytes)
-
-        - Claim via eth signed messages.
-    ----------------------------------------------------- */
-
-    function mint(bytes _sig) whenNotPaused public {
-        bytes32 hash = bytes32(keccak256(abi.encodePacked(
-            "\x19Ethereum Signed Message:\n32",
-            keccak256(abi.encodePacked(msg.sender))
-        )));
-        address minedAddress = hash.recover(_sig);
-        uint256 reward = checkFind(minedAddress);
-
-        claimFor(minedAddress);
-
-        balances.addBalance(msg.sender, reward, minedAddress);
-    }
     
     /* -----------------------------------------------------
-        balanceOf(address) returns (uint256[152])
+        classBalanceOf(address) returns (uint256[152])
         
         - Take the balance of the address, counting over the
             classes.
@@ -264,6 +244,16 @@ contract ERC891 is Ownable, BasicERC, Pausable {
         }
 
         return collection;
+    }
+    
+     /* -----------------------------------------------------
+        allBalanceOf(address) returns (uint256[])
+        
+        - Get all the IDs from address owner
+    ----------------------------------------------------- */
+
+    function allBalanceOf(address _account) whenNotPaused view public returns(address[]) {
+        return balances.getAllBalance(_account);
     }
 
     /* -----------------------------------------------------
