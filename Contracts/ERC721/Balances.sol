@@ -1,6 +1,6 @@
 pragma solidity ^ 0.4.24;
 
-import "./Ownable.sol";
+import "../Support/Ownable.sol";
 
 library SafeMath {
     function mul(uint256 a, uint256 b) internal pure returns(uint256) {

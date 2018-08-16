@@ -1,9 +1,9 @@
 pragma solidity ^ 0.4.24;
 
-import "./ECRecovery.sol";
 import "./Balances.sol";
-import "./Ownable.sol";
-import "./Pausable.sol";
+import "../Support/ECRecovery.sol";
+import "../Support/Ownable.sol";
+import "../Support/Pausable.sol";
 
 
 contract BasicERC {
