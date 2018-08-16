@@ -92,6 +92,19 @@ contract Balances is Ownable {
         return count;
     }
     
+    function getAllBalance(address _account) public view returns(address[]) {
+        address[] memory collection = new address[](getBalanceCount(_account));
+        address t;
+        t = balances[_account][0x0].nextID;
+        
+        for(uint256 idx = 0; t != 0x0; idx++){
+            collection[idx] = t;
+            t = balances[_account][t].nextID;
+        }
+        
+        return collection;
+    }
+    
     function checkValid(address _account, address _ID) public view returns(bool,uint256) {
         address t;
         
